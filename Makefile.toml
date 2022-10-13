@@ -5,10 +5,11 @@ NDK_VERSION = '23'
 
 [tasks.run]
 dependencies = ['install']
-script = 'adb shell su -c /data/local/tmp/${CARGO_MAKE_PROJECT_NAME}'
+command = 'adb'
+args = ['shell', 'su', '-c', '/data/local/tmp/${CARGO_MAKE_PROJECT_NAME}', '${@}']
 
 [tasks.install]
-dependencies = ['clean', 'build']
+dependencies = ['build']
 script = 'adb push target/${TARGET_ABI}/release/${CARGO_MAKE_PROJECT_NAME} /data/local/tmp/'
 
 [tasks.build]

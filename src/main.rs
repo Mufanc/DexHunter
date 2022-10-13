@@ -1,8 +1,13 @@
-use std::process::Command;
+use std::error::Error;
 
-fn main() {
-    println!(
-        "Hunter: {}",
-        String::from_utf8(Command::new("id").output().unwrap().stdout).unwrap()
-    );
+mod argparse;
+mod maps;
+mod dump;
+
+fn main() -> Result<(), Box<dyn Error>> {
+    let args = argparse::parse();
+
+    dump::dump(args.pid)?;
+
+    Ok(())
 }
