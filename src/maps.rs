@@ -23,6 +23,10 @@ impl MemoryMap {
     pub fn size(&self) -> usize {
         (self.address.1 - self.address.0) as _
     }
+
+    pub fn start(&self) -> usize {
+        self.address.0 as _
+    }
 }
 
 #[derive(Debug)]

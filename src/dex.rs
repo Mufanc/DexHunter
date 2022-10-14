@@ -1,6 +1,9 @@
-use std::{fs, io, mem, ptr};
+use std::{fs, mem, ptr};
+use std::error::Error;
 use std::fs::File;
 use std::io::Write;
+use std::process::Command;
+use std::str::FromStr;
 
 use lazy_static::lazy_static;
 use regex::bytes::Regex;
@@ -9,7 +12,8 @@ use crate::argparse::Args;
 use crate::maps::{Memory, MemoryMap};
 
 lazy_static! {
-    static ref MAGIC: Regex = Regex::new("dex\n\\d{3}\0").unwrap();
+    static ref DEX_MAGIC: Regex = Regex::new("dex\n\\d{3}\0").unwrap();
+    static ref TOP_ACTIVITY: Regex = Regex::new("ACTIVITY.*pid=(\\d+)\n.*\n\\s+mResumed=true").unwrap();
 }
 
 // https://source.android.com/docs/core/runtime/dex-format?hl=zh-cn#items
@@ -57,7 +61,7 @@ impl DexHeader {
     }
 
     fn verify(&self, block: &MemoryMap) -> bool {
-        if !MAGIC.is_match(&self.magic) { return false; }
+        if !DEX_MAGIC.is_match(&self.magic) { return false; }
 
         if block.size() < self.file_size as usize { return false; }
 
@@ -71,19 +75,28 @@ impl DexHeader {
         true
     }
 
-    #[inline]
     fn dex_size(&self) -> usize {
         self.file_size as _
     }
 }
 
-pub fn dump(args: &Args) -> Result<(), io::Error> {
+pub fn dump(args: &Args) -> Result<(), Box<dyn Error>> {
     if let Some(output_dir) = &args.output_dir {
         fs::create_dir_all(&output_dir)?;
     }
 
-    let mut memory = Memory::new(args.pid)?;
     let mut mappings = Vec::new();
+    let mut memory = Memory::new(match args.pid {
+        Some(pid) => pid,
+        None => {
+            let output = Command::new("/system/bin/dumpsys")
+                .args(["activity", "top"])
+                .output()?.stdout;
+            let capture = TOP_ACTIVITY.captures(&output[..])
+                .ok_or("failed to get the pid of the top activity")?;
+            i32::from_str(&String::from_utf8(capture[1].to_vec())?)?
+        }
+    })?;
 
     for block in memory.get_maps()? {
         let mut buffer = [0; DexHeader::SIZE];
@@ -99,11 +112,11 @@ pub fn dump(args: &Args) -> Result<(), io::Error> {
                 let output = format!("dumped-{}.dex", mappings.len());
 
                 fs::write(output_dir.join(&output), buffer)?;
-                println!("[*] dumped dex file at {:x}: {}", block.address.0, source);
+                println!("[*] dumped dex file at {:x}: {}", block.start(), source);
 
                 mappings.push((source, output));
             } else {
-                println!("[*] found dex file at {:x}: [{}] {}", block.address.0, block.perms, source);
+                println!("[*] dex file found at {:x}: [{}] {}", block.start(), block.perms, source);
             }
         }
     }
