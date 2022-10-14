@@ -6,7 +6,7 @@ NDK_VERSION = '23'
 [tasks.run]
 dependencies = ['install']
 command = 'adb'
-args = ['shell', 'su', '-c', '/data/local/tmp/${CARGO_MAKE_PROJECT_NAME}', '${@}']
+args = ['shell', '-tt', 'su', '-c', '/data/local/tmp/${CARGO_MAKE_PROJECT_NAME}', '${@}']
 
 [tasks.install]
 dependencies = ['build']

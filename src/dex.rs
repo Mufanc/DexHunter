@@ -44,11 +44,16 @@ struct DexHeader {
 impl DexHeader {
     const SIZE: usize = mem::size_of::<DexHeader>();
 
-    fn new(buffer: &[u8]) -> Option<DexHeader> {
-        if buffer.len() < Self::SIZE {
-            return None;
+    fn new(buffer: &[u8], block: &MemoryMap) -> Option<DexHeader> {
+        let result: DexHeader = unsafe {
+            ptr::read(buffer.as_ptr() as *const _)
+        };
+
+        if result.verify(block) {
+            Some(result)
+        } else {
+            None
         }
-        Some(unsafe { ptr::read(buffer.as_ptr() as *const _) })
     }
 
     fn verify(&self, block: &MemoryMap) -> bool {
@@ -68,36 +73,44 @@ impl DexHeader {
     }
 }
 
-pub fn dump(pid: i32, output_dir: PathBuf) -> Result<(), io::Error> {
-    fs::create_dir_all(&output_dir)?;
+pub fn dump(pid: i32, output_dir: &Option<PathBuf>) -> Result<(), io::Error> {
+    if let Some(output_dir) = output_dir {
+        fs::create_dir_all(&output_dir)?;
+    }
 
     let mut memory = Memory::new(pid)?;
     let mut mappings = Vec::new();
 
     for block in memory.get_maps()? {
         let mut buffer = [0; DexHeader::SIZE];
-        if memory.read(&block, &mut buffer).is_ok() {
-            match DexHeader::new(&buffer) {
-                Some(header) if header.verify(&block) => {
-                    let mut buffer = vec![0; header.file_size as usize];
-                    memory.read(&block, buffer.as_mut_slice())?;
+        if memory.read(&block, &mut buffer).is_err() { continue; }
 
-                    let source = block.pathname.unwrap_or_else(|| String::from("[anonymous memory]"));
-                    let output = format!("dumped-{}.dex", mappings.len());
+        if let Some(header) = DexHeader::new(&buffer, &block) {
+            let source = block.pathname.clone().unwrap_or_else(|| String::from("[anonymous memory]"));
 
-                    fs::write(output_dir.join(&output), buffer)?;
-                    println!("dumped dex file at {:x}: {}", block.address.0, source);
+            if let Some(output_dir) = output_dir {
+                let mut buffer = vec![0; header.file_size as usize];
+                memory.read(&block, buffer.as_mut_slice())?;
 
-                    mappings.push((source, output));
-                }
-                _ => ()
+                let output = format!("dumped-{}.dex", mappings.len());
+
+                fs::write(output_dir.join(&output), buffer)?;
+                println!("[*] dumped dex file at {:x}: {}", block.address.0, source);
+
+                mappings.push((source, output));
+            } else {
+                println!("[*] found dex file at {:x}: {}", block.address.0, source);
             }
         }
     }
 
-    let mut fp = File::create(output_dir.join("mappings.txt")).unwrap();
-    for (source, output) in &mappings {
-        fp.write_all(format!("{}: {}\n", output, source).as_bytes())?;
+    if let Some(output_dir) = output_dir {
+        let mut fp = File::create(output_dir.join("mappings.txt")).unwrap();
+        for (source, output) in &mappings {
+            fp.write_all(format!("{}: {}\n", output, source).as_bytes())?;
+        }
+
+        println!("[*] dumped {} dex file(s) to {:?}", mappings.len(), output_dir);
     }
 
     Ok(())

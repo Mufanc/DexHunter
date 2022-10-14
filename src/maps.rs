@@ -36,7 +36,7 @@ impl Memory {
         Ok(Self {
             pid,
             memory: File::open(format!("/proc/{}/mem", pid))
-                .map_err(utils::inspect("unable to open process memory!"))?
+                .map_err(utils::inspect("failed to open process memory!"))?
         })
     }
 
@@ -54,7 +54,7 @@ impl Memory {
         }
 
         let maps = fs::read_to_string(format!("/proc/{}/maps", self.pid))
-            .map_err(utils::inspect("unable to read process maps!"))?;
+            .map_err(utils::inspect("failed to read process maps!"))?;
 
         Ok(maps.lines()
             .map(|it| {
