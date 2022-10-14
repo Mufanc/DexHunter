@@ -13,11 +13,11 @@ dependencies = ['build']
 script = 'adb push target/${TARGET_ABI}/release/${CARGO_MAKE_PROJECT_NAME} /data/local/tmp/'
 
 [tasks.build]
-dependencies = ['config']
+dependencies = ['configure']
 command = 'cargo'
 args = ['build', '--target', '${TARGET_ABI}', '--release']
 
-[tasks.config]
+[tasks.configure]
 script = '''
 echo "[build]" > .cargo/config
 echo "target = \"${TARGET_ABI}\"" >> .cargo/config
