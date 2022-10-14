@@ -8,8 +8,8 @@ use regex::Regex;
 use crate::utils;
 
 lazy_static! {
-    //                                      address       perms                    pathname
-    static ref PATTERN: Regex = Regex::new("(\\S+)-(\\S+) (\\S+) \\S+ \\S+ \\S+\\s+(\\S.*)?").unwrap();
+    //                                       address     perms               pathname
+    static ref PATTERN: Regex = Regex::new(r"(\S+)-(\S+) (\S+) \S+ \S+ \S+\s+(\S.*)?").unwrap();
 }
 
 #[derive(Debug)]

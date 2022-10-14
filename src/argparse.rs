@@ -9,7 +9,7 @@ pub struct Args {
     pub pid: i32,
 
     #[clap(short, long="output-dir", value_names=&["DIR"], help="Directory to save dumped dex files")]
-    pub output_dir: Option<PathBuf>
+    pub output_dir: Option<PathBuf>,
 }
 
 pub fn parse() -> Args {

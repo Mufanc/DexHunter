@@ -1,19 +1,19 @@
 use std::{fs, io, mem, ptr};
 use std::fs::File;
 use std::io::Write;
-use std::path::PathBuf;
 
 use lazy_static::lazy_static;
-use regex::Regex;
+use regex::bytes::Regex;
 
+use crate::argparse::Args;
 use crate::maps::{Memory, MemoryMap};
 
 lazy_static! {
-    static ref PATTERN: Regex = Regex::new("dex\n\\d{3}\0").unwrap();
+    static ref MAGIC: Regex = Regex::new("dex\n\\d{3}\0").unwrap();
 }
 
 // https://source.android.com/docs/core/runtime/dex-format?hl=zh-cn#items
-// https://cs.android.com/android/platform/superproject/+/master:art/libdexfile/dex/dex_file.h
+// https://android.googlesource.com/platform/art/+/master/libdexfile/dex/dex_file.h
 #[repr(C, packed)]
 struct DexHeader {
     magic: [u8; 8],
@@ -57,8 +57,7 @@ impl DexHeader {
     }
 
     fn verify(&self, block: &MemoryMap) -> bool {
-        let magic: String = self.magic.iter().map(|it| *it as char).collect();
-        if !PATTERN.is_match(&magic) { return false; }
+        if !MAGIC.is_match(&self.magic) { return false; }
 
         if block.size() < self.file_size as usize { return false; }
 
@@ -71,14 +70,19 @@ impl DexHeader {
 
         true
     }
+
+    #[inline]
+    fn dex_size(&self) -> usize {
+        self.file_size as _
+    }
 }
 
-pub fn dump(pid: i32, output_dir: &Option<PathBuf>) -> Result<(), io::Error> {
-    if let Some(output_dir) = output_dir {
+pub fn dump(args: &Args) -> Result<(), io::Error> {
+    if let Some(output_dir) = &args.output_dir {
         fs::create_dir_all(&output_dir)?;
     }
 
-    let mut memory = Memory::new(pid)?;
+    let mut memory = Memory::new(args.pid)?;
     let mut mappings = Vec::new();
 
     for block in memory.get_maps()? {
@@ -88,9 +92,9 @@ pub fn dump(pid: i32, output_dir: &Option<PathBuf>) -> Result<(), io::Error> {
         if let Some(header) = DexHeader::new(&buffer, &block) {
             let source = block.pathname.clone().unwrap_or_else(|| String::from("[anonymous memory]"));
 
-            if let Some(output_dir) = output_dir {
-                let mut buffer = vec![0; header.file_size as usize];
-                memory.read(&block, buffer.as_mut_slice())?;
+            if let Some(output_dir) = &args.output_dir {
+                let mut buffer = vec![0; header.dex_size()];
+                memory.read(&block, &mut buffer[..])?;
 
                 let output = format!("dumped-{}.dex", mappings.len());
 
@@ -99,12 +103,12 @@ pub fn dump(pid: i32, output_dir: &Option<PathBuf>) -> Result<(), io::Error> {
 
                 mappings.push((source, output));
             } else {
-                println!("[*] found dex file at {:x}: {}", block.address.0, source);
+                println!("[*] found dex file at {:x}: [{}] {}", block.address.0, block.perms, source);
             }
         }
     }
 
-    if let Some(output_dir) = output_dir {
+    if let Some(output_dir) = &args.output_dir {
         let mut fp = File::create(output_dir.join("mappings.txt")).unwrap();
         for (source, output) in &mappings {
             fp.write_all(format!("{}: {}\n", output, source).as_bytes())?;
