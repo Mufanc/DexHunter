@@ -1,27 +1,36 @@
 [env]
 TARGET_ABI = 'aarch64-linux-android'
-ANDROID_SDK_ROOT = '${HOME}/Android/Sdk'
-NDK_VERSION = '23'
+
+[tasks.default]
+alias = 'build-all'
+
+[tasks.build-all]
+dependencies = [
+    'configure',
+    'build',
+    'cleanup'
+]
 
 [tasks.run]
-dependencies = ['install']
-command = 'adb'
-args = ['shell', '-tt', 'su', '-c', '/data/local/tmp/${CARGO_MAKE_PROJECT_NAME}', '${@}']
-
-[tasks.install]
-dependencies = ['build']
-script = 'adb push target/${TARGET_ABI}/release/${CARGO_MAKE_PROJECT_NAME} /data/local/tmp/'
-
-[tasks.build]
-dependencies = ['configure']
-command = 'cargo'
-args = ['build', '--target', '${TARGET_ABI}', '--release']
+dependencies = ['build-all']
+script = '''
+adb push target/${TARGET_ABI}/release/${CARGO_MAKE_PROJECT_NAME} /data/local/tmp/
+adb shell -tt su -c /data/local/tmp/${CARGO_MAKE_PROJECT_NAME} ${@}
+'''
 
 [tasks.configure]
 script = '''
+mkdir -p .cargo
 echo "[build]" > .cargo/config
 echo "target = \"${TARGET_ABI}\"" >> .cargo/config
 echo >> .cargo/config
 echo "[target.${TARGET_ABI}]" >> .cargo/config
-echo "linker = \"$(ls -r ${ANDROID_SDK_ROOT}/ndk/${NDK_VERSION}*/toolchains/llvm/prebuilt/*/bin/${TARGET_ABI}*-clang | head -n 1)\"" >> .cargo/config
+echo "linker = \"$(ls -r ${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/*/bin/${TARGET_ABI}*-clang | head -n 1)\"" >> .cargo/config
 '''
+
+[tasks.build]
+command = 'cargo'
+args = ['build', '--target', '${TARGET_ABI}', '--release']
+
+[tasks.cleanup]
+script = 'rm .cargo -r'
