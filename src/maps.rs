@@ -16,7 +16,7 @@ lazy_static! {
 pub struct MemoryMap {
     pub address: (u64, u64),
     pub perms: String,
-    pub pathname: Option<String>
+    pub pathname: Option<String>,
 }
 
 impl MemoryMap {
@@ -32,7 +32,7 @@ impl MemoryMap {
 #[derive(Debug)]
 pub struct Memory {
     pub pid: i32,
-    memory: File
+    memory: File,
 }
 
 impl Memory {
@@ -40,7 +40,7 @@ impl Memory {
         Ok(Self {
             pid,
             memory: File::open(format!("/proc/{}/mem", pid))
-                .map_err(utils::inspect("failed to open process memory!"))?
+                .map_err(utils::inspect("failed to open process memory!"))?,
         })
     }
 
@@ -60,16 +60,16 @@ impl Memory {
         let maps = fs::read_to_string(format!("/proc/{}/maps", self.pid))
             .map_err(utils::inspect("failed to read process maps!"))?;
 
-        Ok(maps.lines()
+        Ok(maps
+            .lines()
             .map(|it| {
                 let iter = PATTERN.captures(it).take().unwrap();
-                let mut iter = iter.iter().skip(1)
-                    .map(|it| it.map(|it| it.as_str()));
+                let mut iter = iter.iter().skip(1).map(|it| it.map(|it| it.as_str()));
 
                 MemoryMap {
                     address: (next_address!(iter), next_address!(iter)),
                     perms: next_string!(iter).unwrap(),
-                    pathname: next_string!(iter)
+                    pathname: next_string!(iter),
                 }
             })
             .collect())

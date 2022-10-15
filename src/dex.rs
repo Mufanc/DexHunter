@@ -13,7 +13,8 @@ use crate::maps::{Memory, MemoryMap};
 
 lazy_static! {
     static ref DEX_MAGIC: Regex = Regex::new("dex\n\\d{3}\0").unwrap();
-    static ref TOP_ACTIVITY: Regex = Regex::new("ACTIVITY.*pid=(\\d+)\n.*\n\\s+mResumed=true").unwrap();
+    static ref TOP_ACTIVITY: Regex =
+        Regex::new("ACTIVITY.*pid=(\\d+)\n.*\n\\s+mResumed=true").unwrap();
 }
 
 // https://source.android.com/docs/core/runtime/dex-format?hl=zh-cn#items
@@ -23,8 +24,8 @@ struct DexHeader {
     magic: [u8; 8],
     checksum: u32,
     signature: [u8; 20],
-    file_size:  u32,
-    header_size: u32,  // = 0x70
+    file_size: u32,
+    header_size: u32,
     endian_tag: u32,
     link_size: u32,
     link_off: u32,
@@ -42,16 +43,14 @@ struct DexHeader {
     class_ids_size: u32,
     class_ids_off: u32,
     data_size: u32,
-    data_off: u32
+    data_off: u32,
 }
 
 impl DexHeader {
     const SIZE: usize = mem::size_of::<DexHeader>();
 
     fn new(buffer: &[u8], block: &MemoryMap) -> Option<DexHeader> {
-        let result: DexHeader = unsafe {
-            ptr::read(buffer.as_ptr() as *const _)
-        };
+        let result: DexHeader = unsafe { ptr::read(buffer.as_ptr() as *const _) };
 
         if result.verify(block) {
             Some(result)
@@ -61,16 +60,26 @@ impl DexHeader {
     }
 
     fn verify(&self, block: &MemoryMap) -> bool {
-        if !DEX_MAGIC.is_match(&self.magic) { return false; }
+        if !DEX_MAGIC.is_match(&self.magic) {
+            return false;
+        }
 
-        if block.size() < self.file_size as usize { return false; }
+        if block.size() < self.file_size as usize {
+            return false;
+        }
 
-        if self.header_size as usize != Self::SIZE { return false; }
+        if self.header_size as usize != Self::SIZE {
+            return false;
+        }
 
         // https://source.android.com/docs/core/runtime/dex-format?hl=zh-cn#endian-constant
-        if self.endian_tag != 0x12345678 && self.endian_tag != 0x78563412 { return false; }
+        if self.endian_tag != 0x12345678 && self.endian_tag != 0x78563412 {
+            return false;
+        }
 
-        if self.type_ids_size > 65535 || self.proto_ids_size > 65535 { return false; }
+        if self.type_ids_size > 65535 || self.proto_ids_size > 65535 {
+            return false;
+        }
 
         true
     }
@@ -91,8 +100,10 @@ pub fn dump(args: &Args) -> Result<(), Box<dyn Error>> {
         None => {
             let output = Command::new("/system/bin/dumpsys")
                 .args(["activity", "top"])
-                .output()?.stdout;
-            let capture = TOP_ACTIVITY.captures(&output[..])
+                .output()?
+                .stdout;
+            let capture = TOP_ACTIVITY
+                .captures(&output[..])
                 .ok_or("failed to get the pid of the top activity")?;
             i32::from_str(&String::from_utf8(capture[1].to_vec())?)?
         }
@@ -100,10 +111,15 @@ pub fn dump(args: &Args) -> Result<(), Box<dyn Error>> {
 
     for block in memory.get_maps()? {
         let mut buffer = [0; DexHeader::SIZE];
-        if memory.read(&block, &mut buffer).is_err() { continue; }
+        if memory.read(&block, &mut buffer).is_err() {
+            continue;
+        }
 
         if let Some(header) = DexHeader::new(&buffer, &block) {
-            let source = block.pathname.clone().unwrap_or_else(|| String::from("[anonymous memory]"));
+            let source = block
+                .pathname
+                .clone()
+                .unwrap_or_else(|| String::from("[anonymous memory]"));
 
             if let Some(output_dir) = &args.output_dir {
                 let mut buffer = vec![0; header.dex_size()];
@@ -116,7 +132,12 @@ pub fn dump(args: &Args) -> Result<(), Box<dyn Error>> {
 
                 mappings.push((source, output));
             } else {
-                println!("[*] dex file found at {:x}: [{}] {}", block.start(), block.perms, source);
+                println!(
+                    "[*] dex file found at {:x}: [{}] {}",
+                    block.start(),
+                    block.perms,
+                    source
+                );
             }
         }
     }
@@ -127,7 +148,11 @@ pub fn dump(args: &Args) -> Result<(), Box<dyn Error>> {
             fp.write_all(format!("{}: {}\n", output, source).as_bytes())?;
         }
 
-        println!("[*] dumped {} dex file(s) to {:?}", mappings.len(), output_dir);
+        println!(
+            "[*] dumped {} dex file(s) to {:?}",
+            mappings.len(),
+            output_dir
+        );
     }
 
     Ok(())

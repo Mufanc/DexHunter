@@ -3,8 +3,8 @@ extern crate core;
 use std::error::Error;
 
 mod argparse;
-mod maps;
 mod dex;
+mod maps;
 mod utils;
 
 fn main() -> Result<(), Box<dyn Error>> {
