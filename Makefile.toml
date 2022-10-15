@@ -1,5 +1,6 @@
 [env]
 TARGET_ABI = 'aarch64-linux-android'
+RUSTFLAGS = { script = { file = "scripts/libgcc.sh" } }
 
 [tasks.default]
 alias = 'build-all'
@@ -19,13 +20,20 @@ adb shell -tt su -c /data/local/tmp/${CARGO_MAKE_PROJECT_NAME} ${@}
 '''
 
 [tasks.configure]
+env = { 'RUSTFLAGS' = '-L .cargo' }
 script = '''
 mkdir -p .cargo
 echo "[build]" > .cargo/config
 echo "target = \"${TARGET_ABI}\"" >> .cargo/config
 echo >> .cargo/config
 echo "[target.${TARGET_ABI}]" >> .cargo/config
-echo "linker = \"$(ls -r ${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/*/bin/${TARGET_ABI}*-clang | head -n 1)\"" >> .cargo/config
+echo "linker = \"$(ls -r "${ANDROID_NDK_ROOT}"/toolchains/llvm/prebuilt/*/bin/${TARGET_ABI}*-clang | head -n 1)\"" >> .cargo/config
+
+# https://github.com/rust-windowing/android-ndk-rs/pull/189
+if [ "$(basename "$ANDROID_NDK_ROOT" | awk -F. '{ print $3 }')" -gt 7272597 ]; then
+    echo "Working around missing libgcc on NDK r23+ with linker script..."
+    echo "INPUT(-lunwind)" > .cargo/libgcc.a
+fi
 '''
 
 [tasks.build]

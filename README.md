@@ -12,7 +12,14 @@
 
 * 克隆项目
 
-* 对于 Android NDK 23+，需要先做简单 [Workaround](https://github.com/rust-lang/rust/pull/85806#issuecomment-1096266946)
+* 配置环境变量
+
+```shell
+# replace with your ndk path
+export ANDROID_NDK_ROOT="/home/mufanc/Android/Sdk/ndk/25.1.8937393/"
+```
+
+* 编译 & 运行
 
 ```shell
 # 基本使用
