@@ -11,7 +11,7 @@ use regex::bytes::Regex;
 use crate::argparse::Args;
 use crate::maps::{Memory, MemoryMap};
 
-const VERSION: &str = env!("CARGO_PKG_VERSION");
+const VERSION: &str = include_str!(concat!(env!("OUT_DIR"), "/VERSION"));
 
 lazy_static! {
     static ref DEX_MAGIC: Regex = Regex::new("dex\n\\d{3}\0").unwrap();
