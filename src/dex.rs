@@ -11,6 +11,8 @@ use regex::bytes::Regex;
 use crate::argparse::Args;
 use crate::maps::{Memory, MemoryMap};
 
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+
 lazy_static! {
     static ref DEX_MAGIC: Regex = Regex::new("dex\n\\d{3}\0").unwrap();
     static ref TOP_ACTIVITY: Regex =
@@ -108,6 +110,8 @@ pub fn dump(args: &Args) -> Result<(), Box<dyn Error>> {
             i32::from_str(&String::from_utf8(capture[1].to_vec())?)?
         }
     })?;
+
+    println!("[*] Hunter version: {}", VERSION);
 
     for block in memory.get_maps()? {
         let mut buffer = [0; DexHeader::SIZE];

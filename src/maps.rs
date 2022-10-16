@@ -1,8 +1,10 @@
 use std::{fs, io};
-use std::fs::File;
-use std::io::{Read, Seek, SeekFrom};
+use std::io::IoSliceMut;
 
 use lazy_static::lazy_static;
+use nix::sys::uio;
+use nix::sys::uio::RemoteIoVec;
+use nix::unistd::Pid;
 use regex::Regex;
 
 use crate::utils;
@@ -32,15 +34,12 @@ impl MemoryMap {
 #[derive(Debug)]
 pub struct Memory {
     pub pid: i32,
-    memory: File,
 }
 
 impl Memory {
     pub fn new(pid: i32) -> Result<Self, io::Error> {
         Ok(Self {
             pid,
-            memory: File::open(format!("/proc/{}/mem", pid))
-                .map_err(utils::inspect("failed to open process memory!"))?,
         })
     }
 
@@ -76,7 +75,12 @@ impl Memory {
     }
 
     pub fn read(&mut self, block: &MemoryMap, buffer: &mut [u8]) -> io::Result<()> {
-        self.memory.seek(SeekFrom::Start(block.address.0))?;
-        self.memory.read_exact(buffer)
+        let remote = RemoteIoVec {
+            base: block.start(),
+            len: buffer.len(),
+        };
+        let buffer = IoSliceMut::new(buffer);
+        uio::process_vm_readv(Pid::from_raw(self.pid), &mut [buffer], &[remote])?;
+        Ok(())
     }
 }
