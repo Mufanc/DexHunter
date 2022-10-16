@@ -38,9 +38,7 @@ pub struct Memory {
 
 impl Memory {
     pub fn new(pid: i32) -> Result<Self, io::Error> {
-        Ok(Self {
-            pid,
-        })
+        Ok(Self { pid })
     }
 
     pub fn get_maps(&self) -> Result<Vec<MemoryMap>, io::Error> {

@@ -1,5 +1,3 @@
-extern crate core;
-
 use std::error::Error;
 
 mod argparse;
