@@ -1,6 +1,6 @@
 [env]
 TARGET_ABI = 'aarch64-linux-android'
-RUSTFLAGS = { script = { file = "scripts/libgcc.sh" } }
+DEPLOY_PATH = '/data/local/tmp/${CARGO_MAKE_PROJECT_NAME}'
 
 [tasks.default]
 alias = 'debug'
@@ -15,7 +15,8 @@ dependencies = ['configure', 'build-release', 'cleanup', 'compress']
 dependencies = ['debug']
 script = '''
 adb push target/${TARGET_ABI}/debug/${CARGO_MAKE_PROJECT_NAME} /data/local/tmp/
-adb shell -tt su -c /data/local/tmp/${CARGO_MAKE_PROJECT_NAME} ${@}
+adb shell chmod +x ${DEPLOY_PATH}
+adb shell -tt su -c ${DEPLOY_PATH} ${@}
 '''
 
 [tasks.configure]
