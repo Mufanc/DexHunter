@@ -1,6 +1,6 @@
 # Hunter
 
-* 简易脱壳小工具，参考葫芦娃了大佬的 [`frida-dexdump`](https://github.com/hluwa/frida-dexdump)，但是由 Rust 编写
+* 简易脱壳小工具，参考葫芦娃大佬的 [`frida-dexdump`](https://github.com/hluwa/frida-dexdump)，但是由 Rust 编写
 
 ## 优势
 
