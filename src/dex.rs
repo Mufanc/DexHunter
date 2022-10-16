@@ -128,12 +128,12 @@ pub fn dump(args: &Args) -> Result<(), Box<dyn Error>> {
                 let output = format!("dumped-{}.dex", mappings.len());
 
                 fs::write(output_dir.join(&output), buffer)?;
-                println!("[*] dumped dex file at {:x}: {}", block.start(), source);
+                println!("[*] Dumped dex file at {:x}: {}", block.start(), source);
 
                 mappings.push((source, output));
             } else {
                 println!(
-                    "[*] dex file found at {:x}: [{}] {}",
+                    "[*] Dex file found at {:x}: [{}] {}",
                     block.start(),
                     block.perms,
                     source
@@ -149,7 +149,7 @@ pub fn dump(args: &Args) -> Result<(), Box<dyn Error>> {
         }
 
         println!(
-            "[*] dumped {} dex file(s) to {:?}",
+            "[*] Dumped {} dex file(s) to {:?}",
             mappings.len(),
             output_dir
         );
