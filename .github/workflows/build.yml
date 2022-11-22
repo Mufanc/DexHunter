@@ -1,0 +1,39 @@
+name: Build
+
+on:
+  push:
+    branches: [ master ]
+    paths-ignore:
+      - '**.md'
+      - '.github/**'
+      - '!.github/workflows/**'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    if: ${{ !startsWith(github.event.head_commit.message, '[skip ci]') }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Add target with rustup
+        run: rustup target add aarch64-linux-android
+
+      - name: Install cargo-make
+        run: cargo install --force cargo-make
+
+      - name: Build with cargo
+        id: release
+        run: |
+          cargo make release
+          echo ::set-output name=name::"Hunter [$(git rev-parse --short HEAD)]"
+
+      - name: Upload artifacts
+        if: success()
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ steps.release.outputs.name }}
+          path: target/*/release/hunter
