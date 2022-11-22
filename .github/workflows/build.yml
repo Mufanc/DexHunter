@@ -21,11 +21,23 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Setup cargo cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: cargo-
+
       - name: Add target with rustup
         run: rustup target add aarch64-linux-android
 
       - name: Install cargo-make
-        run: cargo install --force cargo-make
+        run: cargo install cargo-make || true
 
       - name: Build with cargo
         id: release
