@@ -16,7 +16,7 @@
 
 ```shell
 # replace with your ndk path
-export ANDROID_NDK_ROOT="/home/mufanc/Android/Sdk/ndk/25.1.8937393/"
+export ANDROID_NDK_ROOT="/home/mufanc/Android/Sdk/ndk/25.1.8937393"
 ```
 
 * 编译 & 运行
