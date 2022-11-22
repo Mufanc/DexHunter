@@ -45,6 +45,7 @@ command = 'cargo'
 args = ['build', '--target', '${TARGET_ABI}', '--release']
 
 [tasks.compress]
+condition = { env_not_set = ['GITHUB_ACTIONS'] }
 command = 'upx'
 args = ['target/${TARGET_ABI}/release/${CARGO_MAKE_PROJECT_NAME}']
 
