@@ -29,7 +29,7 @@ jobs:
         id: release
         run: |
           cargo make release
-          echo ::set-output name=name::"Hunter [$(git rev-parse --short HEAD)]"
+          echo name="Hunter [$(git rev-parse --short HEAD)]" >> $GITHUB_OUTPUT
 
       - name: Upload artifacts
         if: success()
