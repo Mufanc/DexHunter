@@ -10,6 +10,28 @@
 
 ## 使用
 
+### 下载预编译版本
+
+[![Build](https://img.shields.io/github/workflow/status/Mufanc/Hunter/Build?logo=github&label=build)](https://github.com/Mufanc/Hunter/actions)
+
+* 部署至 Android 设备
+
+```shell
+adb push hunter /data/local/tmp
+adb shell chmod +x /data/local/tmp/hunter
+```
+
+* 运行
+
+```shell
+adb shell
+su 
+cd /data/local/tmp
+./hunter --pid '$(pidof com.example.app)' -o <output_dir>
+```
+
+### 手动编译
+
 * 克隆项目
 
 * 配置环境变量
