@@ -1,4 +1,4 @@
-# Hunter
+# DexHunter
 
 * 简易脱壳小工具，参考葫芦娃大佬的 [`frida-dexdump`](https://github.com/hluwa/frida-dexdump)，但是由 Rust 编写
 
@@ -11,8 +11,7 @@
 ## 使用
 
 ### 下载预编译版本
-
-[![Build](https://img.shields.io/github/workflow/status/Mufanc/Hunter/Build?logo=github&label=build)](https://github.com/Mufanc/Hunter/actions)
+[![Build](https://img.shields.io/github/actions/workflow/status/Mufanc/DexHunter/build.yml?branch=master&label=build)](https://github.com/Mufanc/DexHunter/actions)
 
 * 部署至 Android 设备
 
