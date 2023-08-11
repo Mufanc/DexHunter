@@ -6,10 +6,10 @@ DEPLOY_PATH = '/data/local/tmp/${CARGO_MAKE_PROJECT_NAME}'
 alias = 'debug'
 
 [tasks.debug]
-dependencies = ['configure', 'build-debug', 'cleanup']
+dependencies = ['prepare', 'build-debug', 'cleanup']
 
 [tasks.release]
-dependencies = ['configure', 'build-release', 'cleanup', 'compress']
+dependencies = ['prepare', 'build-release', 'cleanup', 'compress']
 
 [tasks.run]
 dependencies = ['debug']
@@ -19,7 +19,7 @@ adb shell chmod +x ${DEPLOY_PATH}
 adb shell -tt su -c ${DEPLOY_PATH} ${@}
 '''
 
-[tasks.configure]
+[tasks.prepare]
 env = { 'RUSTFLAGS' = '-L .cargo' }
 script = '''
 mkdir -p .cargo
@@ -50,4 +50,4 @@ command = 'upx'
 args = ['target/${TARGET_ABI}/release/${CARGO_MAKE_PROJECT_NAME}']
 
 [tasks.cleanup]
-script = 'rm .cargo -r'
+script = 'rm -r .cargo'
