@@ -1,53 +1,85 @@
 [env]
 TARGET_ABI = 'aarch64-linux-android'
 DEPLOY_PATH = '/data/local/tmp/${CARGO_MAKE_PROJECT_NAME}'
+ADB = 'adb'
 
 [tasks.default]
 alias = 'debug'
 
 [tasks.debug]
-dependencies = ['prepare', 'build-debug', 'cleanup']
+dependencies = [ 'prepare' ]
+env = { 'PROFILE' = 'debug' }
+run_task = [
+    { name = [ 'build-debug' ], fork = true, cleanup_task = 'cleanup' }
+]
 
 [tasks.release]
-dependencies = ['prepare', 'build-release', 'cleanup', 'compress']
+dependencies = [ 'prepare' ]
+env = { 'PROFILE' = 'release' }
+run_task = [
+    { name = [ 'build-release', 'upx-compress' ], fork = true, cleanup_task = 'cleanup' }
+]
+
+[tasks.push-to-device]
+script = '''
+"$ADB" push ./target/$TARGET_ABI/$PROFILE/$CARGO_MAKE_PROJECT_NAME "$DEPLOY_PATH"
+"$ADB" shell chmod +x "$DEPLOY_PATH"
+'''
 
 [tasks.run]
-dependencies = ['debug']
+dependencies = [ 'debug', 'push-to-device' ]
 script = '''
-adb push target/${TARGET_ABI}/debug/${CARGO_MAKE_PROJECT_NAME} /data/local/tmp/
-adb shell chmod +x ${DEPLOY_PATH}
-adb shell -tt su -c ${DEPLOY_PATH} ${@}
+"$ADB" exec-out su -c "$DEPLOY_PATH" ${@}
 '''
+
+[tasks.install]
+dependencies = [ 'release', 'push-to-device' ]
 
 [tasks.prepare]
 env = { 'RUSTFLAGS' = '-L .cargo' }
+run_task = [
+    { name = 'print-error-require-ndk-root', condition = { env_not_set = [ 'ANDROID_NDK_ROOT' ] } },
+    { name = [ 'generate-cargo-config', 'libgcc-linker-script' ] }
+]
+
+[tasks.print-error-require-ndk-root]
+script = '''
+echo "You need to set the ANDROID_NDK_ROOT environment variable to point to your Android NDK."
+exit 1
+'''
+
+[tasks.generate-cargo-config]
 script = '''
 mkdir -p .cargo
-echo "[build]" > .cargo/config
-echo "target = \"${TARGET_ABI}\"" >> .cargo/config
-echo >> .cargo/config
-echo "[target.${TARGET_ABI}]" >> .cargo/config
-echo "linker = \"$(ls -r "${ANDROID_NDK_ROOT}"/toolchains/llvm/prebuilt/*/bin/${TARGET_ABI}*-clang | head -n 1)\"" >> .cargo/config
+cat << EOF > .cargo/config
+[build]
+target = "$TARGET_ABI"
 
+[target.$TARGET_ABI]
+linker = "$(ls -r "${ANDROID_NDK_ROOT}"/toolchains/llvm/prebuilt/*/bin/${TARGET_ABI}*-clang | head -n 1)"
+EOF
+'''
+
+[tasks.libgcc-linker-script]
+script = '''
 # https://github.com/rust-windowing/android-ndk-rs/pull/189
 if [ "$(basename "$ANDROID_NDK_ROOT" | awk -F. '{ print $3 }')" -gt 7272597 ]; then
-    echo "Working around missing libgcc on NDK r23+ with linker script..."
     echo "INPUT(-lunwind)" > .cargo/libgcc.a
 fi
 '''
 
 [tasks.build-debug]
 command = 'cargo'
-args = ['build', '--target', '${TARGET_ABI}']
+args = [ 'build', '--target', '${TARGET_ABI}' ]
 
 [tasks.build-release]
 command = 'cargo'
-args = ['build', '--target', '${TARGET_ABI}', '--release']
+args = [ 'build', '--target', '${TARGET_ABI}', '--release' ]
 
-[tasks.compress]
-condition = { env_not_set = ['GITHUB_ACTIONS'] }
+[tasks.upx-compress]
+condition = { env_set = [ 'UPX_COMPRESS' ] }
 command = 'upx'
-args = ['target/${TARGET_ABI}/release/${CARGO_MAKE_PROJECT_NAME}']
+args = ['./target/${TARGET_ABI}/release/${CARGO_MAKE_PROJECT_NAME}']
 
 [tasks.cleanup]
-script = 'rm -r .cargo'
+script = 'rm -r .cargo || true'
