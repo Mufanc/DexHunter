@@ -16,7 +16,7 @@ const VERSION: &str = include_str!(concat!(env!("OUT_DIR"), "/VERSION"));
 lazy_static! {
     static ref DEX_MAGIC: Regex = Regex::new("dex\n\\d{3}\0").unwrap();
     static ref TOP_ACTIVITY: Regex =
-        Regex::new("ACTIVITY.*pid=(\\d+)\n.*\n\\s+mResumed=true").unwrap();
+        Regex::new("ACTIVITY (\\S+) .*pid=(\\d+)\n.*\n\\s+mResumed=true").unwrap();
 }
 
 // https://source.android.com/docs/core/runtime/dex-format?hl=zh-cn#items
@@ -96,6 +96,8 @@ pub fn dump(args: &Args) -> Result<(), Box<dyn Error>> {
         fs::create_dir_all(&output_dir)?;
     }
 
+    let mut top_activity: Option<String> = None;
+
     let mut mappings = Vec::new();
     let mut memory = Memory::new(match args.pid {
         Some(pid) => pid,
@@ -107,11 +109,16 @@ pub fn dump(args: &Args) -> Result<(), Box<dyn Error>> {
             let capture = TOP_ACTIVITY
                 .captures(&output[..])
                 .ok_or("failed to get the pid of the top activity")?;
-            i32::from_str(&String::from_utf8(capture[1].to_vec())?)?
+            top_activity = Some(String::from_utf8(capture[1].to_vec())?);
+            i32::from_str(&String::from_utf8(capture[2].to_vec())?)?
         }
     })?;
 
-    println!("[*] Hunter version: {}", VERSION);
+    println!("[*] DexHunter version: {}", VERSION);
+
+    if let Some(name) = top_activity {
+        println!("[*] Top activity: {}", name)
+    }
 
     for block in memory.get_maps()? {
         let mut buffer = [0; DexHeader::SIZE];
