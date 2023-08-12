@@ -1,5 +1,5 @@
 [env]
-TARGET_ABI = 'aarch64-linux-android'
+TARGET_ABI = { value = 'aarch64-linux-android', condition = { env_not_set = [ 'TARGET_ABI' ] }}
 DEPLOY_PATH = '/data/local/tmp/${CARGO_MAKE_PROJECT_NAME}'
 ADB = 'adb'
 
