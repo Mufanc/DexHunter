@@ -29,17 +29,16 @@ script = '''
 [tasks.run]
 dependencies = [ 'debug', 'push-to-device' ]
 script = '''
-"$ADB" exec-out su -c "$DEPLOY_PATH" ${@}
+"$ADB" exec-out su -c "$DEPLOY_PATH" "$@"
 '''
 
 [tasks.install]
 dependencies = [ 'release', 'push-to-device' ]
 
 [tasks.prepare]
-env = { 'RUSTFLAGS' = '-L .cargo' }
 run_task = [
     { name = 'print-error-require-ndk-root', condition = { env_not_set = [ 'ANDROID_NDK_ROOT' ] } },
-    { name = [ 'generate-cargo-config', 'libgcc-linker-script' ] }
+    { name = [ 'prepare-cargo-directory', 'libgcc-linker-script' ] }
 ]
 
 [tasks.print-error-require-ndk-root]
@@ -48,7 +47,7 @@ echo "You need to set the ANDROID_NDK_ROOT environment variable to point to your
 exit 1
 '''
 
-[tasks.generate-cargo-config]
+[tasks.prepare-cargo-directory]
 script = '''
 mkdir -p .cargo
 cat << EOF > .cargo/config
@@ -56,8 +55,9 @@ cat << EOF > .cargo/config
 target = "$TARGET_ABI"
 
 [target.$TARGET_ABI]
-linker = "$(ls -r "${ANDROID_NDK_ROOT}"/toolchains/llvm/prebuilt/*/bin/${TARGET_ABI}*-clang | head -n 1)"
+linker = "$(ls -r "$ANDROID_NDK_ROOT"/toolchains/llvm/prebuilt/*/bin/$TARGET_ABI*-clang | head -n 1)"
 EOF
+touch .cargo/environ
 '''
 
 [tasks.libgcc-linker-script]
@@ -65,21 +65,24 @@ script = '''
 # https://github.com/rust-windowing/android-ndk-rs/pull/189
 if [ "$(basename "$ANDROID_NDK_ROOT" | awk -F. '{ print $3 }')" -gt 7272597 ]; then
     echo "INPUT(-lunwind)" > .cargo/libgcc.a
+    echo "RUSTFLAGS=$RUSTFLAGS -L .cargo" >> .cargo/environ
 fi
 '''
 
 [tasks.build-debug]
+env_files = [ ".cargo/environ" ]
 command = 'cargo'
 args = [ 'build', '--target', '${TARGET_ABI}' ]
 
 [tasks.build-release]
+env_files = [ ".cargo/environ" ]
 command = 'cargo'
 args = [ 'build', '--target', '${TARGET_ABI}', '--release' ]
 
 [tasks.upx-compress]
 condition = { env_set = [ 'UPX_COMPRESS' ] }
 command = 'upx'
-args = ['./target/${TARGET_ABI}/release/${CARGO_MAKE_PROJECT_NAME}']
+args = [ './target/${TARGET_ABI}/release/${CARGO_MAKE_PROJECT_NAME}' ]
 
 [tasks.cleanup]
 script = 'rm -r .cargo || true'
