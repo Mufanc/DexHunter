@@ -11,13 +11,18 @@ on:
 
 jobs:
   build:
-    name: Build
     runs-on: ubuntu-latest
     if: ${{ !startsWith(github.event.head_commit.message, '[skip ci]') }}
 
+    strategy:
+      matrix:
+        abi: [ aarch64-linux-android, x86_64-linux-android ]
+
+    name: Build (${{ matrix.abi }})
+
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
@@ -33,21 +38,24 @@ jobs:
           key: cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: cargo-
 
-      - name: Add target with rustup
-        run: rustup target add aarch64-linux-android
-
-      - name: Install cargo-make
-        run: cargo install cargo-make || true
+      - name: Prepare environment
+        run: |
+          rustup target add aarch64-linux-android
+          rustup target add x86_64-linux-android
+          cargo install cargo-make || true
 
       - name: Build with cargo
         id: release
+        env:
+          TARGET_ABI: ${{ matrix.abi }}
+          UPX_COMPRESS: 1
         run: |
           cargo make release
-          echo name="Hunter [$(git rev-parse --short HEAD)]" >> $GITHUB_OUTPUT
+          echo name="DexHunter-$(cargo metadata --no-deps --format-version=1 | jq -r '.packages[0].version').r$(git rev-list --count HEAD).$(git rev-parse --short HEAD) (${{ matrix.abi }})" >> $GITHUB_OUTPUT
 
       - name: Upload artifacts
         if: success()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: ${{ steps.release.outputs.name }}
-          path: target/*/release/hunter
+          path: ./target/${{ matrix.abi }}/release/dexhunter
