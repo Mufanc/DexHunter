@@ -10,6 +10,9 @@ pub struct Args {
 
     #[clap(short, long = "output-dir", value_names = & ["DIR"], help = "Directory to save dumped dex files")]
     pub output_dir: Option<PathBuf>,
+
+    #[clap(short, long, default_value = "false")]
+    pub verbose: bool
 }
 
 pub fn parse() -> Args {

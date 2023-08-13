@@ -1,11 +1,10 @@
-use std::error::Error;
-
 mod argparse;
+mod dump;
+mod memory;
 mod dex;
-mod maps;
-mod utils;
 
-fn main() -> Result<(), Box<dyn Error>> {
-    dex::dump(&argparse::parse())?;
-    Ok(())
+fn main() {
+    if let Err(err) = dump::dump_dex_files(&argparse::parse()) {
+        println!("[!] Error: {:?}", err)
+    }
 }
