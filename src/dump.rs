@@ -27,9 +27,6 @@ pub fn dump_dex_files(args: &Args) -> anyhow::Result<()> {
         }
     }
 
-    let mut mappings = vec![];
-    let mut top_activity: Option<String> = None;
-
     let memory = RemoteMemory::new(match args.pid {
         Some(pid) => pid,
         None => {
@@ -42,15 +39,16 @@ pub fn dump_dex_files(args: &Args) -> anyhow::Result<()> {
                 .captures(&output[..])
                 .ok_or(anyhow::format_err!("failed to get pid of the top activity"))?;
 
-            top_activity = Some(String::from_utf8(captures[1].to_vec())?);
+            let top_activity = String::from_utf8(captures[1].to_vec())?;
+            let top_activity_pid = i32::from_str(&String::from_utf8(captures[2].to_vec())?)?;
 
-            i32::from_str(&String::from_utf8(captures[2].to_vec())?)?
+            println!("[*] Top activity: {} ({})", top_activity, top_activity_pid);
+
+            top_activity_pid
         }
     });
 
-    if let Some(name) = top_activity {
-        println!("[*] Top activity: {}", name)
-    }
+    let mut mappings = vec![];
 
     for map in memory.read_maps()? {
         if let Ok(dex) = MemoryDex::new(&memory, &map) {
