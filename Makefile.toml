@@ -85,4 +85,4 @@ command = 'upx'
 args = [ './target/${TARGET_ABI}/release/${CARGO_MAKE_PROJECT_NAME}' ]
 
 [tasks.cleanup]
-script = 'rm -r .cargo || true'
+script = 'find .cargo -type file | grep -v config | xargs rm'
