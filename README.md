@@ -16,8 +16,8 @@
 * 部署至 Android 设备
 
 ```shell
-adb push hunter /data/local/tmp
-adb shell chmod +x /data/local/tmp/hunter
+adb push dexhunter /data/local/tmp
+adb shell chmod +x /data/local/tmp/dexhunter
 ```
 
 * 运行
