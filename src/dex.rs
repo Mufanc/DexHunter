@@ -1,5 +1,6 @@
 use std::{fs, mem, ptr};
 use std::path::PathBuf;
+use log::debug;
 use once_cell::sync::Lazy;
 use regex::bytes::Regex;
 use crate::memory::{RemoteMemory, MemoryMap};
@@ -67,19 +68,23 @@ impl<'a> MemoryDex<'a> {
 
     pub fn is_valid(&self) -> bool {
         if !PATTERN_DEX_MAGIC.is_match(&self.header.magic) {
+            debug!("invalid header magic: {:?}", &self.header.magic);
             return false
         }
 
         if self.map.size() < self.header.file_size as usize {
+            debug!("file size doesn't match");
             return false
         }
 
         // https://source.android.com/docs/core/runtime/dex-format?hl=zh-cn#endian-constant
         if self.header.endian_tag != 0x12345678 && self.header.endian_tag != 0x78563412 {
+            debug!("invalid endian tag");
             return false;
         }
 
         if self.header.type_ids_size > 65535 || self.header.proto_ids_size > 65535 {
+            debug!("too many method ids or proto ids");
             return false;
         }
 
