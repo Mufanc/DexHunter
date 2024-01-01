@@ -58,7 +58,7 @@ impl<'a> MemoryDex<'a> {
     pub fn new(memory: &'a RemoteMemory, map: &'a MemoryMap) -> anyhow::Result<Self> {
         let mut buffer = [0; Header::SIZE];
 
-        memory.read_memory(&map, &mut buffer)?;
+        memory.read_memory(map, &mut buffer)?;
 
         Ok(Self {
             memory, map,
@@ -88,17 +88,17 @@ impl<'a> MemoryDex<'a> {
             return false;
         }
 
-        return true
+        true
     }
 
     pub fn size(&self) -> usize {
-        return self.header.file_size as usize
+        self.header.file_size as usize
     }
 
     pub fn dump(&self, output_file: &PathBuf) -> anyhow::Result<()> {
         let mut buffer = vec![0; self.size()];
 
-        self.memory.read_memory(&self.map, &mut buffer[..])?;
+        self.memory.read_memory(self.map, &mut buffer[..])?;
         fs::write(output_file, buffer)?;
 
         Ok(())
