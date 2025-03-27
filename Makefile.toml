@@ -1,88 +1,40 @@
 [env]
 TARGET_ABI = { value = 'aarch64-linux-android', condition = { env_not_set = [ 'TARGET_ABI' ] }}
+TARGET_SDK = '31'
 DEPLOY_PATH = '/data/local/tmp/${CARGO_MAKE_PROJECT_NAME}'
 ADB = 'adb'
 
 [tasks.default]
-alias = 'debug'
-
-[tasks.debug]
-dependencies = [ 'prepare' ]
-env = { 'PROFILE' = 'debug' }
-run_task = [
-    { name = [ 'build-debug' ], fork = true, cleanup_task = 'cleanup' }
-]
-
-[tasks.release]
-dependencies = [ 'prepare' ]
-env = { 'PROFILE' = 'release' }
-run_task = [
-    { name = [ 'build-release', 'upx-compress' ], fork = true, cleanup_task = 'cleanup' }
-]
-
-[tasks.push-to-device]
-script = '''
-"$ADB" push ./target/$TARGET_ABI/$PROFILE/$CARGO_MAKE_PROJECT_NAME "$DEPLOY_PATH"
-"$ADB" shell chmod +x "$DEPLOY_PATH"
-'''
-
-[tasks.run]
-dependencies = [ 'debug', 'push-to-device' ]
-script = '''
-"$ADB" exec-out su -c "$DEPLOY_PATH" "$@"
-'''
-
-[tasks.install]
-dependencies = [ 'release', 'push-to-device' ]
+alias = 'build'
 
 [tasks.prepare]
-run_task = [
-    { name = 'print-error-require-ndk-root', condition = { env_not_set = [ 'ANDROID_NDK_ROOT' ] } },
-    { name = [ 'prepare-cargo-directory', 'libgcc-linker-script' ] }
-]
-
-[tasks.print-error-require-ndk-root]
 script = '''
-echo "You need to set the ANDROID_NDK_ROOT environment variable to point to your Android NDK."
-exit 1
-'''
+rm -rf .cargo
 
-[tasks.prepare-cargo-directory]
-script = '''
 mkdir -p .cargo
-cat << EOF > .cargo/config
+
+cat << EOF > .cargo/config.toml
 [build]
 target = "$TARGET_ABI"
 
 [target.$TARGET_ABI]
-linker = "$(ls -r "$ANDROID_NDK_ROOT"/toolchains/llvm/prebuilt/*/bin/$TARGET_ABI*-clang | head -n 1)"
+ar = "$(ls "$ANDROID_NDK"/toolchains/llvm/prebuilt/*/bin/llvm-ar | head -n 1)"
+linker = "$(ls -r "$ANDROID_NDK"/toolchains/llvm/prebuilt/*/bin/"$TARGET_ABI"*-clang | head -n 1)"
 EOF
-touch .cargo/environ
 '''
 
-[tasks.libgcc-linker-script]
-script = '''
-# https://github.com/rust-windowing/android-ndk-rs/pull/189
-if [ "$(basename "$ANDROID_NDK_ROOT" | awk -F. '{ print $3 }')" -gt 7272597 ]; then
-    echo "INPUT(-lunwind)" > .cargo/libgcc.a
-    echo "RUSTFLAGS=$RUSTFLAGS -L .cargo" >> .cargo/environ
-fi
-'''
-
-[tasks.build-debug]
-env_files = [ ".cargo/environ" ]
+[tasks.build]
+dependencies = [ 'prepare' ]
 command = 'cargo'
-args = [ 'build', '--target', '${TARGET_ABI}' ]
+args = [ 'build' ]
 
-[tasks.build-release]
-env_files = [ ".cargo/environ" ]
+[tasks.release]
+dependencies = [ 'prepare' ]
 command = 'cargo'
-args = [ 'build', '--target', '${TARGET_ABI}', '--release' ]
+args = [ 'build', '--release' ]
 
-[tasks.upx-compress]
-condition = { env_set = [ 'UPX_COMPRESS' ] }
+[tasks.upx-release]
+dependencies = [ 'release' ]
 command = 'upx'
 args = [ './target/${TARGET_ABI}/release/${CARGO_MAKE_PROJECT_NAME}' ]
 
-[tasks.cleanup]
-script = 'find .cargo -type f | grep -v config | xargs rm'
